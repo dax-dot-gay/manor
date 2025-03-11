@@ -1,0 +1,9 @@
+[package]
+name = "manor_common"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+mongodb = "3.2.2"
+uuid = { version = "1.15.1", features = ["v4", "fast-rng", "serde"] }
+bson = { version = "2.13.0", features = ["uuid-1", "chrono"] }

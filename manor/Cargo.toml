@@ -1,0 +1,8 @@
+[package]
+name = "manor"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+manor_macros = { path = "../manor_macros" }
+manor_common = { path = "../manor_common" }
