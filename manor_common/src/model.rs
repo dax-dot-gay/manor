@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::{Deref, DerefMut}};
 
 use bson::oid::ObjectId;
 use serde::{de::DeserializeOwned, Serialize};
@@ -22,5 +22,18 @@ impl<S: Schema> Model<S> {
         Self {
             data, collection
         }
+    }
+}
+
+impl<S: Schema> Deref for Model<S> {
+    type Target = S;
+    fn deref(&self) -> &Self::Target {
+        &self.data
+    }
+}
+
+impl<S: Schema> DerefMut for Model<S> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.data
     }
 }

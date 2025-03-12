@@ -10,3 +10,4 @@ bson = { version = "2.13.0", features = ["uuid-1", "chrono"] }
 serde = { version = "1.0.219", features = ["derive"] }
 futures-core = "0.3.31"
 futures-util = "0.3.31"
+pin-project = "1.1.10"

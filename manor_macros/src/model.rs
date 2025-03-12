@@ -63,8 +63,27 @@ pub(crate) fn derive_model(tokens: TokenStream) -> TokenStream {
         }
     };
 
+    let model_name = match syn::Ident::from_string(&(schema_name.to_string().to_case(Case::UpperCamel) + "Model")) {
+        Ok(i) => i,
+        Err(e) => {
+            return TokenStream::from(e.write_errors())
+        }
+    };
+    let collection_name = match syn::Ident::from_string(&(schema_name.to_string().to_case(Case::UpperCamel) + "Collection")) {
+        Ok(i) => i,
+        Err(e) => {
+            return TokenStream::from(e.write_errors())
+        }
+    };;
+
+    let aliases = quote! {
+        pub type #model_name = manor::Model<#schema_name>;
+        pub type #collection_name = manor::Collection<#schema_name>;
+    };
+
     quote! {
         #schema_impl
+        #aliases
     }
     .into()
 }
