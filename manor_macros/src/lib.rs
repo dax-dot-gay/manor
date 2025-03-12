@@ -1,8 +1,9 @@
 use proc_macro::TokenStream;
 
-mod model;
+mod schema;
+mod util;
 
-#[proc_macro_derive(Model, attributes(manor))]
-pub fn derive_model(item: TokenStream) -> TokenStream {
-    model::derive_model(item)
+#[proc_macro_attribute]
+pub fn schema(args: TokenStream, input: TokenStream) -> TokenStream {
+    schema::generate_schema(args, input)
 }

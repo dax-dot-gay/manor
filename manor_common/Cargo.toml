@@ -11,3 +11,5 @@ serde = { version = "1.0.219", features = ["derive"] }
 futures-core = "0.3.31"
 futures-util = "0.3.31"
 pin-project = "1.1.10"
+thiserror = "2.0.12"
+derive_builder = "0.20.2"
