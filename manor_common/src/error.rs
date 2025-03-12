@@ -7,6 +7,15 @@ pub enum Error {
 
     #[error("Serialization failed: {0:?}")]
     Serialization(bson::ser::Error),
+
+    #[error("Invalid connection URI ({0}): {1:?}")]
+    InvalidUri(String, mongodb::error::Error),
+
+    #[error("Failed to create MongoDB client: {0:?}")]
+    ClientFailure(mongodb::error::Error),
+
+    #[error("Mongodb operation failed: {0:?}")]
+    MongoError(mongodb::error::Error)
 }
 
 impl From<bson::de::Error> for Error {
@@ -18,6 +27,12 @@ impl From<bson::de::Error> for Error {
 impl From<bson::ser::Error> for Error {
     fn from(value: bson::ser::Error) -> Self {
         Self::Serialization(value)
+    }
+}
+
+impl From<mongodb::error::Error> for Error {
+    fn from(value: mongodb::error::Error) -> Self {
+        Self::MongoError(value)
     }
 }
 

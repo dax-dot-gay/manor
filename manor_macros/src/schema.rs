@@ -119,19 +119,22 @@ pub(crate) fn generate_schema(_args: TokenStream, _input: TokenStream) -> TokenS
         }
 
         impl manor::Model for #schema_name {
-            fn from_document(document: manor::bson::Document, collection: manor::Collection<Self>) -> manor::MResult<Self> {
+            fn from_document(document: manor::bson::Document, collection: Option<manor::Collection<Self>>) -> manor::MResult<Self> {
                 let mut created = manor::bson::from_document::<Self>(document).or_else(|e| Err(manor::Error::from(e)))?;
-                created._collection = Some(collection);
+                created._collection = collection.clone();
                 Ok(created)
             }
             fn collection_name() -> String {
                 #collection_name.to_string()
             }
-            fn collection(&self) -> manor::Collection<Self> {
-                self._collection.clone().expect("Collection is not initialized.")
+            fn own_collection(&self) -> Option<manor::Collection<Self>> {
+                self._collection.clone()
             }
             fn id(&self) -> manor::bson::oid::ObjectId {
                 self.#id_alias.clone()
+            }
+            fn attach_collection(&mut self, collection: manor::Collection<Self>) -> () {
+                self._collection = Some(collection.clone());
             }
         }
     }
