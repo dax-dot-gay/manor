@@ -1,39 +1,13 @@
-use std::{fmt::Debug, ops::{Deref, DerefMut}};
+use std::fmt::Debug;
 
 use bson::oid::ObjectId;
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::collection::Collection;
+use crate::{collection::Collection, error::MResult};
 
-pub trait Schema: Serialize + DeserializeOwned + Send + Sync + Clone + Debug {
-    fn id_field() -> String;
+pub trait Model: Serialize + DeserializeOwned + Clone + Debug + Send + Sync {
+    fn from_document(document: bson::Document, collection: Collection<Self>) -> MResult<Self>;
     fn collection_name() -> String;
+    fn collection(&self) -> Collection<Self>;
     fn id(&self) -> ObjectId;
-}
-
-#[derive(Clone, Debug)]
-pub struct Model<S: Schema> {
-    data: S,
-    collection: Collection<S>
-}
-
-impl<S: Schema> Model<S> {
-    pub(crate) fn _create(data: S, collection: Collection<S>) -> Self {
-        Self {
-            data, collection
-        }
-    }
-}
-
-impl<S: Schema> Deref for Model<S> {
-    type Target = S;
-    fn deref(&self) -> &Self::Target {
-        &self.data
-    }
-}
-
-impl<S: Schema> DerefMut for Model<S> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.data
-    }
 }

@@ -1,17 +1,17 @@
-use std::error::Error;
+use manor::schema;
 
-use manor::{Model, Schema as _, bson::oid::ObjectId};
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Model, Clone, Debug)]
-#[manor(schema(id = "id"))]
-pub struct Testing {
-    #[serde(rename = "_id")]
-    id: ObjectId,
-    test: String,
+#[schema]
+struct Testing {
+    beans: String
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
-    println!("{}, {}", Testing::collection_name(), Testing::id_field());
+impl Testing {
+    pub fn test(&self) {
+        println!("{}", self.beans);
+    }
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("{:?}", TestingBuilder::create_empty().beans("Test").build()?);
     Ok(())
 }
