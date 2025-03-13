@@ -1,12 +1,12 @@
 use std::task::Poll;
 
-use bson::Document;
+use bson::{Document, oid::ObjectId};
 use futures_core::Stream;
-use mongodb::options::{
+use mongodb::{options::{
     AggregateOptions, CountOptions, DeleteOptions, EstimatedDocumentCountOptions,
     FindOneAndDeleteOptions, FindOneAndReplaceOptions, FindOneAndUpdateOptions, FindOneOptions,
-    FindOptions, UpdateModifications,
-};
+    FindOptions, InsertManyOptions, InsertOneOptions, ReplaceOptions, UpdateModifications, UpdateOptions,
+}, results::UpdateResult, Namespace};
 
 use crate::{
     client::Client,
@@ -293,26 +293,140 @@ impl<M: Model + Send + Sync> Collection<M> {
     }
 
     pub async fn find_many(&self, query: impl Into<Document>) -> MResult<Cursor<M>> {
-        self.find(query, Find::<M>::many()).await.and_then(|r| Ok(r.cursor().unwrap()))
+        self.find(query, Find::<M>::many())
+            .await
+            .and_then(|r| Ok(r.cursor().unwrap()))
     }
 
     pub async fn find_one(&self, query: impl Into<Document>) -> MResult<Option<M>> {
-        self.find(query, Find::<M>::one()).await.and_then(|r| Ok(r.single().unwrap()))
+        self.find(query, Find::<M>::one())
+            .await
+            .and_then(|r| Ok(r.single().unwrap()))
     }
 
     pub async fn find_one_and_delete(&self, query: impl Into<Document>) -> MResult<Option<M>> {
-        self.find(query, Find::<M>::delete()).await.and_then(|r| Ok(r.single().unwrap()))
+        self.find(query, Find::<M>::delete())
+            .await
+            .and_then(|r| Ok(r.single().unwrap()))
     }
 
-    pub async fn find_one_and_replace(&self, query: impl Into<Document>, replacement: M) -> MResult<Option<M>> {
-        self.find(query, Find::<M>::replace(replacement)).await.and_then(|r| Ok(r.single().unwrap()))
+    pub async fn find_one_and_replace(
+        &self,
+        query: impl Into<Document>,
+        replacement: M,
+    ) -> MResult<Option<M>> {
+        self.find(query, Find::<M>::replace(replacement))
+            .await
+            .and_then(|r| Ok(r.single().unwrap()))
     }
 
-    pub async fn find_one_and_upsert(&self, query: impl Into<Document>, replacement: M) -> MResult<Option<M>> {
-        self.find(query, Find::<M>::replace_or_insert(replacement)).await.and_then(|r| Ok(r.single().unwrap()))
+    pub async fn find_one_and_upsert(
+        &self,
+        query: impl Into<Document>,
+        replacement: M,
+    ) -> MResult<Option<M>> {
+        self.find(query, Find::<M>::replace_or_insert(replacement))
+            .await
+            .and_then(|r| Ok(r.single().unwrap()))
     }
 
-    pub async fn find_one_and_update(&self, query: impl Into<Document>, update: impl Into<UpdateModifications>) -> MResult<Option<M>> {
-        self.find(query, Find::<M>::update(update)).await.and_then(|r| Ok(r.single().unwrap()))
+    pub async fn find_one_and_update(
+        &self,
+        query: impl Into<Document>,
+        update: impl Into<UpdateModifications>,
+    ) -> MResult<Option<M>> {
+        self.find(query, Find::<M>::update(update))
+            .await
+            .and_then(|r| Ok(r.single().unwrap()))
+    }
+
+    pub async fn insert_many_with_options(
+        &self,
+        documents: impl IntoIterator<Item = M>,
+        options: impl Into<Option<InsertManyOptions>>,
+    ) -> MResult<Vec<ObjectId>> {
+        self.collection()
+            .insert_many(documents)
+            .with_options(options)
+            .await
+            .and_then(|r| {
+                Ok(r.inserted_ids
+                    .values()
+                    .filter_map(|i| i.as_object_id())
+                    .collect())
+            })
+            .or_else(|e| Err(e.into()))
+    }
+
+    pub async fn insert_one_with_options(
+        &self,
+        document: M,
+        options: impl Into<Option<InsertOneOptions>>,
+    ) -> MResult<Option<ObjectId>> {
+        self.collection()
+            .insert_one(document)
+            .with_options(options)
+            .await
+            .and_then(|r| Ok(r.inserted_id.as_object_id()))
+            .or_else(|e| Err(e.into()))
+    }
+
+    pub async fn insert_many(
+        &self,
+        documents: impl IntoIterator<Item = M>,
+    ) -> MResult<Vec<ObjectId>> {
+        self.insert_many_with_options(documents, None).await
+    }
+
+    pub async fn insert_one(&self, document: M) -> MResult<Option<ObjectId>> {
+        self.insert_one_with_options(document, None).await
+    }
+
+    pub async fn replace_one_with_options(
+        &self,
+        query: impl Into<Document>,
+        document: M,
+        upsert: bool,
+        options: impl Into<Option<ReplaceOptions>>,
+    ) -> MResult<Option<ObjectId>> {
+        self.collection()
+            .replace_one(query.into(), document)
+            .with_options(options)
+            .upsert(upsert)
+            .await
+            .and_then(|r| Ok(r.upserted_id.and_then(|i| i.as_object_id())))
+            .or_else(|e| Err(e.into()))
+    }
+
+    pub async fn replace_one(&self, query: impl Into<Document>, document: M) -> MResult<Option<ObjectId>> {
+        self.replace_one_with_options(query, document, false, None).await
+    }
+
+    pub async fn replace_or_insert_one(&self, query: impl Into<Document>, document: M) -> MResult<Option<ObjectId>> {
+        self.replace_one_with_options(query, document, true, None).await
+    }
+
+    pub async fn update_with_options(&self, query: impl Into<Document>, update: impl Into<UpdateModifications>, operations: Ops, options: impl Into<Option<UpdateOptions>>) -> MResult<UpdateResult> {
+        let collection = self.collection();
+        match operations {
+            Ops::One => collection.update_one(query.into(), update).with_options(options).await.or_else(|e| Err(e.into())),
+            Ops::Many => collection.update_many(query.into(), update).with_options(options).await.or_else(|e| Err(e.into())),
+        }
+    }
+
+    pub async fn update_one(&self, query: impl Into<Document>, update: impl Into<UpdateModifications>) -> MResult<UpdateResult> {
+        self.update_with_options(query, update, Ops::One, None).await
+    }
+
+    pub async fn update_many(&self, query: impl Into<Document>, update: impl Into<UpdateModifications>) -> MResult<UpdateResult> {
+        self.update_with_options(query, update, Ops::Many, None).await
+    }
+
+    pub fn name(&self) -> String {
+        self.collection().name().to_string()
+    }
+
+    pub fn namespace(&self) -> Namespace {
+        self.collection().namespace().clone()
     }
 }
