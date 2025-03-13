@@ -14,5 +14,3 @@ pin-project = "1.1.10"
 thiserror = "2.0.12"
 derive_builder = "0.20.2"
 async-trait = "0.1.87"
-inherit-methods-macro = "0.1.0"
-manor_macros = {path = "../manor_macros"}

@@ -15,7 +15,10 @@ pub enum Error {
     ClientFailure(mongodb::error::Error),
 
     #[error("Mongodb operation failed: {0:?}")]
-    MongoError(mongodb::error::Error)
+    MongoError(mongodb::error::Error),
+
+    #[error("Queried document not found.")]
+    NotFound
 }
 
 impl From<bson::de::Error> for Error {
