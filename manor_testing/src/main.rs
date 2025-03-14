@@ -1,7 +1,8 @@
-use manor::schema;
+use manor::{field, schema};
 
 #[schema]
 struct Testing {
+    #[field(id)]
     beans: String
 }
 

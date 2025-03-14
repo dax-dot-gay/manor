@@ -1,5 +1,5 @@
 use convert_case::{Case, Casing};
-use darling::{FromMeta, ast::NestedMeta, util::IdentString};
+use darling::{ast::NestedMeta, util::IdentString, FromField, FromMeta};
 use proc_macro::TokenStream;
 use quote::{ToTokens, quote};
 use syn::{
@@ -9,11 +9,26 @@ use syn::{
 
 use crate::util::catch;
 
+#[derive(Debug, FromField)]
+struct FieldArgs {
+    ident: Option<Ident>,
+    vis: Visibility,
+    ty: syn::Type,
+    id: bool
+}
+
+pub(crate) fn handle_field(_args: TokenStream, _input: TokenStream) -> TokenStream {
+    quote! {}.into()
+}
+
+
+
 #[derive(Debug, FromMeta, Default)]
 #[darling(default)]
 struct SchemaArgs {
     collection: Option<String>,
     id_alias: Option<String>,
+    id_type: Option<syn::Type>,
     schema_name: Option<IdentString>,
     builder_name: Option<IdentString>,
 }
@@ -119,6 +134,8 @@ pub(crate) fn generate_schema(_args: TokenStream, _input: TokenStream) -> TokenS
         }
 
         impl manor::Model for #schema_name {
+            type Id = manor::bson::oid::ObjectId;
+
             fn from_document(document: manor::bson::Document, collection: Option<manor::Collection<Self>>) -> manor::MResult<Self> {
                 let mut created = manor::bson::from_document::<Self>(document).or_else(|e| Err(manor::Error::from(e)))?;
                 created._collection = collection.clone();
@@ -130,7 +147,7 @@ pub(crate) fn generate_schema(_args: TokenStream, _input: TokenStream) -> TokenS
             fn own_collection(&self) -> Option<manor::Collection<Self>> {
                 self._collection.clone()
             }
-            fn id(&self) -> manor::bson::oid::ObjectId {
+            fn id(&self) -> Self::Id {
                 self.#id_alias.clone()
             }
             fn attach_collection(&mut self, collection: manor::Collection<Self>) -> () {

@@ -7,3 +7,9 @@ mod util;
 pub fn schema(args: TokenStream, input: TokenStream) -> TokenStream {
     schema::generate_schema(args, input)
 }
+
+#[proc_macro_attribute]
+pub fn field(args: TokenStream, input: TokenStream) -> TokenStream {
+    println!("{} @ {}", args.to_string(), input.to_string());
+    input
+}
