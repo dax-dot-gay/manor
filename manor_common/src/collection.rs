@@ -1,12 +1,17 @@
 use std::task::Poll;
 
-use bson::{Document, oid::ObjectId};
+use bson::{Bson, Document, doc, from_bson};
 use futures_core::Stream;
-use mongodb::{options::{
-    AggregateOptions, CountOptions, DeleteOptions, EstimatedDocumentCountOptions,
-    FindOneAndDeleteOptions, FindOneAndReplaceOptions, FindOneAndUpdateOptions, FindOneOptions,
-    FindOptions, InsertManyOptions, InsertOneOptions, ReplaceOptions, UpdateModifications, UpdateOptions,
-}, results::UpdateResult, Namespace};
+use mongodb::{
+    Namespace,
+    options::{
+        AggregateOptions, CountOptions, DeleteOptions, EstimatedDocumentCountOptions,
+        FindOneAndDeleteOptions, FindOneAndReplaceOptions, FindOneAndUpdateOptions, FindOneOptions,
+        FindOptions, InsertManyOptions, InsertOneOptions, ReplaceOptions, UpdateModifications,
+        UpdateOptions,
+    },
+    results::UpdateResult,
+};
 
 use crate::{
     client::Client,
@@ -133,6 +138,14 @@ impl<M: Model + Send + Sync> Stream for Cursor<M> {
 }
 
 impl<M: Model + Send + Sync> Collection<M> {
+    fn parse_id(bson: &Bson) -> Option<M::Id> {
+        if let Ok(parsed) = from_bson::<M::Id>(bson.clone()) {
+            Some(parsed)
+        } else {
+            None
+        }
+    }
+
     pub fn client(&self) -> Client {
         self.client.clone()
     }
@@ -344,17 +357,12 @@ impl<M: Model + Send + Sync> Collection<M> {
         &self,
         documents: impl IntoIterator<Item = M>,
         options: impl Into<Option<InsertManyOptions>>,
-    ) -> MResult<Vec<ObjectId>> {
+    ) -> MResult<Vec<M::Id>> {
         self.collection()
             .insert_many(documents)
             .with_options(options)
             .await
-            .and_then(|r| {
-                Ok(r.inserted_ids
-                    .values()
-                    .filter_map(|i| i.as_object_id())
-                    .collect())
-            })
+            .and_then(|r| Ok(r.inserted_ids.values().filter_map(Self::parse_id).collect()))
             .or_else(|e| Err(e.into()))
     }
 
@@ -362,23 +370,20 @@ impl<M: Model + Send + Sync> Collection<M> {
         &self,
         document: M,
         options: impl Into<Option<InsertOneOptions>>,
-    ) -> MResult<Option<ObjectId>> {
+    ) -> MResult<Option<M::Id>> {
         self.collection()
             .insert_one(document)
             .with_options(options)
             .await
-            .and_then(|r| Ok(r.inserted_id.as_object_id()))
+            .and_then(|r| Ok(Self::parse_id(&r.inserted_id)))
             .or_else(|e| Err(e.into()))
     }
 
-    pub async fn insert_many(
-        &self,
-        documents: impl IntoIterator<Item = M>,
-    ) -> MResult<Vec<ObjectId>> {
+    pub async fn insert_many(&self, documents: impl IntoIterator<Item = M>) -> MResult<Vec<M::Id>> {
         self.insert_many_with_options(documents, None).await
     }
 
-    pub async fn insert_one(&self, document: M) -> MResult<Option<ObjectId>> {
+    pub async fn insert_one(&self, document: M) -> MResult<Option<M::Id>> {
         self.insert_one_with_options(document, None).await
     }
 
@@ -388,38 +393,72 @@ impl<M: Model + Send + Sync> Collection<M> {
         document: M,
         upsert: bool,
         options: impl Into<Option<ReplaceOptions>>,
-    ) -> MResult<Option<ObjectId>> {
+    ) -> MResult<Option<M::Id>> {
         self.collection()
             .replace_one(query.into(), document)
             .with_options(options)
             .upsert(upsert)
             .await
-            .and_then(|r| Ok(r.upserted_id.and_then(|i| i.as_object_id())))
+            .and_then(|r| Ok(r.upserted_id.and_then(|i| Self::parse_id(&i))))
             .or_else(|e| Err(e.into()))
     }
 
-    pub async fn replace_one(&self, query: impl Into<Document>, document: M) -> MResult<Option<ObjectId>> {
-        self.replace_one_with_options(query, document, false, None).await
+    pub async fn replace_one(
+        &self,
+        query: impl Into<Document>,
+        document: M,
+    ) -> MResult<Option<M::Id>> {
+        self.replace_one_with_options(query, document, false, None)
+            .await
     }
 
-    pub async fn replace_or_insert_one(&self, query: impl Into<Document>, document: M) -> MResult<Option<ObjectId>> {
-        self.replace_one_with_options(query, document, true, None).await
+    pub async fn replace_or_insert_one(
+        &self,
+        query: impl Into<Document>,
+        document: M,
+    ) -> MResult<Option<M::Id>> {
+        self.replace_one_with_options(query, document, true, None)
+            .await
     }
 
-    pub async fn update_with_options(&self, query: impl Into<Document>, update: impl Into<UpdateModifications>, operations: Ops, options: impl Into<Option<UpdateOptions>>) -> MResult<UpdateResult> {
+    pub async fn update_with_options(
+        &self,
+        query: impl Into<Document>,
+        update: impl Into<UpdateModifications>,
+        operations: Ops,
+        options: impl Into<Option<UpdateOptions>>,
+    ) -> MResult<UpdateResult> {
         let collection = self.collection();
         match operations {
-            Ops::One => collection.update_one(query.into(), update).with_options(options).await.or_else(|e| Err(e.into())),
-            Ops::Many => collection.update_many(query.into(), update).with_options(options).await.or_else(|e| Err(e.into())),
+            Ops::One => collection
+                .update_one(query.into(), update)
+                .with_options(options)
+                .await
+                .or_else(|e| Err(e.into())),
+            Ops::Many => collection
+                .update_many(query.into(), update)
+                .with_options(options)
+                .await
+                .or_else(|e| Err(e.into())),
         }
     }
 
-    pub async fn update_one(&self, query: impl Into<Document>, update: impl Into<UpdateModifications>) -> MResult<UpdateResult> {
-        self.update_with_options(query, update, Ops::One, None).await
+    pub async fn update_one(
+        &self,
+        query: impl Into<Document>,
+        update: impl Into<UpdateModifications>,
+    ) -> MResult<UpdateResult> {
+        self.update_with_options(query, update, Ops::One, None)
+            .await
     }
 
-    pub async fn update_many(&self, query: impl Into<Document>, update: impl Into<UpdateModifications>) -> MResult<UpdateResult> {
-        self.update_with_options(query, update, Ops::Many, None).await
+    pub async fn update_many(
+        &self,
+        query: impl Into<Document>,
+        update: impl Into<UpdateModifications>,
+    ) -> MResult<UpdateResult> {
+        self.update_with_options(query, update, Ops::Many, None)
+            .await
     }
 
     pub fn name(&self) -> String {
@@ -428,5 +467,15 @@ impl<M: Model + Send + Sync> Collection<M> {
 
     pub fn namespace(&self) -> Namespace {
         self.collection().namespace().clone()
+    }
+
+    pub async fn get(&self, id: impl Into<M::Id>) -> MResult<Option<M>> {
+        self.find_one(doc! {"_id": Into::<M::Id>::into(id)}).await
+    }
+
+    pub async fn save(&self, document: M) -> MResult<()> {
+        self.replace_or_insert_one(doc! {"_id": document.id()}, document)
+            .await
+            .and(Ok(()))
     }
 }
