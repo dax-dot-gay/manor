@@ -3,7 +3,10 @@ use manor::schema;
 #[schema]
 struct Testing {
     #[field(id = manor::uuid::Uuid::new_v4)]
-    id: manor::uuid::Uuid
+    id: manor::uuid::Uuid,
+
+    #[field(alias = "soup")]
+    beans: String
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

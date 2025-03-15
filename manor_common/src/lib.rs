@@ -3,6 +3,7 @@ pub mod collection;
 pub mod error;
 pub mod client;
 pub mod types;
+pub mod gridfs;
 
 pub use client::MANOR_CLIENT;
 

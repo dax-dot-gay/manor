@@ -57,8 +57,12 @@ impl<M: Model + Send + Sync> Link<M> {
         }
     }
 
-    pub fn value(&self) -> Option<M> {
-        self.resolved.clone()
+    pub fn value(&self) -> Option<&M> {
+        self.resolved.as_ref()
+    }
+
+    pub fn value_mut(&mut self) -> Option<&mut M> {
+        self.resolved.as_mut()
     }
 }
 

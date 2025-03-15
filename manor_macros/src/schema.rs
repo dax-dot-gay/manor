@@ -3,7 +3,7 @@ use darling::{FromMeta, ast::NestedMeta, util::IdentString};
 use proc_macro::TokenStream;
 use quote::{ToTokens, quote};
 use syn::{
-    parse::{Parse, Parser}, punctuated::Punctuated, token::Comma, Expr, Field, Ident, ItemStruct, TypePath
+    parse::{Parse, Parser}, punctuated::Punctuated, token::Comma, Attribute, Expr, Field, Ident, ItemStruct, TypePath
 };
 
 use crate::util::catch;
@@ -12,7 +12,7 @@ use crate::util::catch;
 #[darling(default)]
 struct FieldArgs {
     id: Option<Expr>,
-    alias: Option<IdentString>,
+    alias: Option<String>,
 }
 #[derive(Debug, FromMeta, Default)]
 #[darling(default)]
@@ -59,6 +59,9 @@ pub(crate) fn generate_schema(_args: TokenStream, _input: TokenStream) -> TokenS
             if attr.path().is_ident("field") {
                 let parsed_field = catch!(FieldArgs::from_meta(&attr.meta));
                 if let Some(id_field) = parsed_field.id.clone() {
+                    if id_name.is_some() {
+                        return quote! {"ERROR: Already assigned a field to be the primary ID of this model."}.into();
+                    }
                     id_generator = match id_field {
                         Expr::Closure(closure) => {
                             let tokens = closure.to_token_stream();
@@ -91,7 +94,18 @@ pub(crate) fn generate_schema(_args: TokenStream, _input: TokenStream) -> TokenS
 
                     already_parsed = true;
                 } else {
-                    
+                    let mut attributes: Vec<Attribute> = Vec::new();
+
+                    if let Some(alias) = parsed_field.alias.clone() {
+                        attributes.extend(catch!(Attribute::parse_outer.parse(quote! {#[serde(rename = #alias)]}.into())));
+                    }
+
+                    let mut new_field = field.clone();
+                    new_field.attrs.extend(attributes);
+                    new_field.attrs = new_field.attrs.iter().filter_map(|f| if f.path().is_ident("field") {None} else {Some(f.clone())}).collect();
+                    new_fields.push(new_field);
+
+                    already_parsed = true;
                 }
             }
         }

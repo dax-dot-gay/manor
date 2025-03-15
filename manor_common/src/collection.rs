@@ -150,12 +150,18 @@ impl<M: Model + Send + Sync> Collection<M> {
         self.client.clone()
     }
 
-    pub fn new(client: Client) -> Self {
+    pub fn new_local(client: Client) -> Self {
         client.collection::<M>()
     }
 
-    pub fn global() -> Option<Self> {
+    pub fn new_global() -> Option<Self> {
         Client::global().and_then(|c| Some(c.collection::<M>()))
+    }
+
+    pub fn new() -> Self {
+        Client::global()
+            .expect("Global client not initialized.")
+            .collection::<M>()
     }
 
     pub fn collection(&self) -> mongodb::Collection<M> {

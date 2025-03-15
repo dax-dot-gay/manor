@@ -21,7 +21,10 @@ pub enum Error {
     NotFound,
 
     #[error("The linked document has not been resolved yet: {0}::{1}")]
-    UnresolvedLink(String, String)
+    UnresolvedLink(String, String),
+
+    #[error("Failed to write data to GridFS")]
+    WriteFailure(String)
 }
 
 impl From<bson::de::Error> for Error {
