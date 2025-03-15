@@ -5,9 +5,14 @@ pub mod client;
 pub mod types;
 pub mod gridfs;
 
+/// Global instance of the Client, set using
+/// 
+/// ```
+/// Client::connect_with_*().as_global();
+/// ```
 pub use client::MANOR_CLIENT;
 
-pub use serde;
-pub use bson;
-pub use uuid;
-pub use derive_builder;
+#[doc(hidden)]
+pub use {
+    serde, bson, uuid, derive_builder
+};

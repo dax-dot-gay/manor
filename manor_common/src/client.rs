@@ -11,6 +11,7 @@ use crate::{
 
 pub const MANOR_CLIENT: OnceCell<Client> = OnceCell::new();
 
+/// A Manor client instance, wrapping the MongoDB client and a single database name.
 #[derive(Clone, Debug)]
 pub struct Client {
     client: mongodb::Client,
@@ -18,10 +19,12 @@ pub struct Client {
 }
 
 impl Client {
+    /// Returns the underlying Mongo database
     pub fn database(&self) -> mongodb::Database {
         self.client.database(&self.database)
     }
 
+    /// Returns a typed [Collection] from a model type
     pub fn collection<M: Model + Send + Sync>(&self) -> Collection<M> {
         Collection {
             collection: self.database().collection(&M::collection_name()),
@@ -29,6 +32,7 @@ impl Client {
         }
     }
 
+    /// Creates a client from a MongoDB connection string
     pub fn connect_with_uri(uri: impl Into<String>, database: impl Into<String>) -> MResult<Self> {
         let converted = uri.into();
         let connection_str = mongodb::options::ConnectionString::parse(&converted)
@@ -39,6 +43,7 @@ impl Client {
         Self::connect_with_options(options, database)
     }
 
+    /// Creates a client from MongoDB client options
     pub fn connect_with_options(
         options: mongodb::options::ClientOptions,
         database: impl Into<String>,
@@ -50,6 +55,7 @@ impl Client {
         })
     }
 
+    /// Creates a client from an existing MongoDB client instance
     pub fn connect_with_client(client: mongodb::Client, database: impl Into<String>) -> Self {
         Self {
             client,
@@ -57,16 +63,19 @@ impl Client {
         }
     }
 
+    /// Makes this instance global. As the instance is a global [std::cell::OnceCell], this method will panic if a global client has already been set.
     pub fn as_global(self) {
         MANOR_CLIENT
             .set(self)
             .expect("A global client was already set.");
     }
 
+    /// Returns the global instance, if initialized.
     pub fn global() -> Option<Self> {
         MANOR_CLIENT.get().cloned()
     }
 
+    /// Returns a [GridFS] instance based on this [Client]
     pub fn grid_fs(&self) -> GridFS {
         GridFS {
             bucket: self.database().gridfs_bucket(
@@ -79,6 +88,7 @@ impl Client {
         }
     }
 
+    /// Returns a [GridFS] instance with a custom name
     pub fn named_grid_fs(&self, name: impl Into<String>) -> GridFS {
         let sname: String = name.into();
         GridFS {
@@ -93,6 +103,7 @@ impl Client {
     }
 }
 
+/// Allows a [Client] to be constructed from a [mongodb::Database]
 impl From<mongodb::Database> for Client {
     fn from(value: mongodb::Database) -> Self {
         Self {
