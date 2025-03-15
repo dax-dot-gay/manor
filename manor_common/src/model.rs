@@ -22,4 +22,12 @@ pub trait Model: Serialize + DeserializeOwned + Clone + Debug + Send + Sync {
             MANOR_CLIENT.get().expect("Neither a local nor global client has been initialized.").clone().collection::<Self>()
         }
     }
+
+    async fn save(&self) -> MResult<()> {
+        self.collection().save(self.clone()).await
+    }
+
+    async fn delete(self) -> MResult<()> {
+        self.collection().delete(self).await
+    }
 }

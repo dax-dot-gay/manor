@@ -2,6 +2,7 @@ pub mod model;
 pub mod collection;
 pub mod error;
 pub mod client;
+pub mod types;
 
 pub use client::MANOR_CLIENT;
 

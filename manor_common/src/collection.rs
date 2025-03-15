@@ -478,4 +478,8 @@ impl<M: Model + Send + Sync> Collection<M> {
             .await
             .and(Ok(()))
     }
+
+    pub async fn delete(&self, document: M) -> MResult<()> {
+        self.delete_one(doc! {"_id": document.id()}).await
+    }
 }

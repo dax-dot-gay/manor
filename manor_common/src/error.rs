@@ -18,7 +18,10 @@ pub enum Error {
     MongoError(mongodb::error::Error),
 
     #[error("Queried document not found.")]
-    NotFound
+    NotFound,
+
+    #[error("The linked document has not been resolved yet: {0}::{1}")]
+    UnresolvedLink(String, String)
 }
 
 impl From<bson::de::Error> for Error {
