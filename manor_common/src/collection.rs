@@ -19,40 +19,68 @@ use crate::{
     model::Model,
 };
 
+/// A wrapper around [mongodb::Collection] with abstractions for common operations
 #[derive(Clone, Debug)]
 pub struct Collection<M: Model + Send + Sync> {
     pub(crate) collection: mongodb::Collection<M>,
     pub(crate) client: Client,
 }
 
+/// An enum describing how many operations to run, in certain cases
 #[derive(Clone, Debug)]
 pub enum Ops {
+    /// Run many operations (ie find_many, delete_many, etc)
     Many,
+
+    /// Run at most one operation (ie find_one, delete_one, etc)
     One,
 }
 
+/// A wrapper for the options of several `find` operations. Should not need to be manually constructed in most cases.
 #[derive(Clone, Debug)]
 pub enum Find<M: Model + Send + Sync> {
+    /// Used for [mongodb::Collection::find]
     Many(Option<FindOptions>),
+
+    /// Used for [mongodb::Collection::find_one]
     One(Option<FindOneOptions>),
+
+    /// Used for [mongodb::Collection::find_one_and_delete]
     Delete(Option<FindOneAndDeleteOptions>),
+
+    /// Used for [mongodb::Collection::find_one_and_replace]
     Replace {
+        /// Document to replace with
         replacement: M,
+
+        /// Find/replace options
         options: Option<FindOneAndReplaceOptions>,
+
+        /// Whether to upsert (insert if no document was found)
         upsert: bool,
     },
+
+    /// Used for [mongodb::Collection::find_one_and_update]
     Update {
+        /// Update modifications to apply
         modifications: UpdateModifications,
+
+        /// Find/update options
         options: Option<FindOneAndUpdateOptions>,
     },
 }
 
+/// The result of a Find operation
 pub enum FindResult<M: Model + Send + Sync> {
+    /// A cursor over multiple documents
     Cursor(Cursor<M>),
+
+    /// A single document, or [None]
     Single(Option<M>),
 }
 
 impl<M: Model + Send + Sync> FindResult<M> {
+    /// Returns a [Cursor] that wraps [mongodb::Cursor], if this result was of type [FindResult::Cursor]
     pub fn cursor(self) -> Option<Cursor<M>> {
         if let Self::Cursor(c) = self {
             Some(c)
@@ -61,6 +89,7 @@ impl<M: Model + Send + Sync> FindResult<M> {
         }
     }
 
+    /// Returns [`Option<M>`] if this result was of type [FindResult::Single]
     pub fn single(self) -> Option<Option<M>> {
         if let Self::Single(s) = self {
             Some(s)
@@ -70,6 +99,7 @@ impl<M: Model + Send + Sync> FindResult<M> {
     }
 }
 
+#[allow(missing_docs)]
 impl<M: Model + Send + Sync> Find<M> {
     pub fn many() -> Self {
         Self::Many(None)
@@ -107,6 +137,7 @@ impl<M: Model + Send + Sync> Find<M> {
     }
 }
 
+/// A wrapper around [mongodb::Cursor] that attaches the current collection to results automatically
 #[pin_project::pin_project]
 pub struct Cursor<M: Model + Send + Sync> {
     pub(crate) collection: Collection<M>,
@@ -146,33 +177,40 @@ impl<M: Model + Send + Sync> Collection<M> {
         }
     }
 
+    /// Gets this collection's [Client]
     pub fn client(&self) -> Client {
         self.client.clone()
     }
 
+    /// Gets a collection from a local [Client]
     pub fn new_local(client: Client) -> Self {
         client.collection::<M>()
     }
 
+    /// Gets a collection from the global [Client], if present
     pub fn new_global() -> Option<Self> {
         Client::global().and_then(|c| Some(c.collection::<M>()))
     }
 
+    /// Gets a collection from the global [Client], panicking if the global [Client] is undefined.
     pub fn new() -> Self {
         Client::global()
             .expect("Global client not initialized.")
             .collection::<M>()
     }
 
+    /// Returns the underlying [mongodb::Collection]
     pub fn collection(&self) -> mongodb::Collection<M> {
         self.collection.clone()
     }
 
+    /// Attaches this collection to a [Model]
     pub fn wrap(&self, mut model: M) -> M {
         model.attach_collection(self.clone());
         model
     }
 
+    /// Wraps a [mongodb::Cursor] in a [Cursor]
     pub fn cursor(&self, cursor: mongodb::Cursor<M>) -> Cursor<M> {
         Cursor::<M> {
             collection: self.clone(),
@@ -180,6 +218,7 @@ impl<M: Model + Send + Sync> Collection<M> {
         }
     }
 
+    /// Runs aggregation with a defined type & options
     pub async fn aggregate_with_options<T>(
         &self,
         pipeline: impl IntoIterator<Item = Document>,
@@ -193,6 +232,7 @@ impl<M: Model + Send + Sync> Collection<M> {
             .or_else(|e| Err(e.into()))
     }
 
+    /// Runs a simple untyped aggregation
     pub async fn aggregate(
         &self,
         pipeline: impl IntoIterator<Item = Document>,
@@ -201,6 +241,7 @@ impl<M: Model + Send + Sync> Collection<M> {
             .await
     }
 
+    /// Runs a simple typed aggregation
     pub async fn aggregate_typed<T>(
         &self,
         pipeline: impl IntoIterator<Item = Document>,
@@ -208,6 +249,7 @@ impl<M: Model + Send + Sync> Collection<M> {
         self.aggregate_with_options::<T>(pipeline, None).await
     }
 
+    /// Gets an exact document count with options
     pub async fn exact_count_with_options(
         &self,
         query: impl Into<Document>,
@@ -220,6 +262,7 @@ impl<M: Model + Send + Sync> Collection<M> {
             .or_else(|e| Err(e.into()))
     }
 
+    /// Gets an estimated document count with options
     pub async fn estimated_count_with_options(
         &self,
         options: impl Into<Option<EstimatedDocumentCountOptions>>,
@@ -231,14 +274,17 @@ impl<M: Model + Send + Sync> Collection<M> {
             .or_else(|e| Err(e.into()))
     }
 
+    /// Default exact_count
     pub async fn exact_count(&self, query: impl Into<Document>) -> MResult<u64> {
         self.exact_count_with_options(query, None).await
     }
 
+    /// Default estimated_count
     pub async fn estimated_count(&self) -> MResult<u64> {
         self.estimated_count_with_options(None).await
     }
 
+    /// Deletes [Ops::One] or [Ops::Many] documents with options
     pub async fn delete_with_options(
         &self,
         query: impl Into<Document>,
@@ -255,6 +301,7 @@ impl<M: Model + Send + Sync> Collection<M> {
         .and_then(|v| Ok(v.deleted_count))
     }
 
+    /// Deletes one document
     pub async fn delete_one(&self, query: impl Into<Document>) -> MResult<()> {
         match self.delete_with_options(query, Ops::One, None).await {
             Ok(1) => Ok(()),
@@ -263,10 +310,12 @@ impl<M: Model + Send + Sync> Collection<M> {
         }
     }
 
+    /// Deletes all documents matching a query
     pub async fn delete_many(&self, query: impl Into<Document>) -> MResult<u64> {
         self.delete_with_options(query, Ops::Many, None).await
     }
 
+    /// Performs an advanced Find operation
     pub async fn find(&self, query: impl Into<Document>, find: Find<M>) -> MResult<FindResult<M>> {
         let collection = self.collection();
         match find {
@@ -311,24 +360,28 @@ impl<M: Model + Send + Sync> Collection<M> {
         }
     }
 
+    /// Finds many documents, returning an iterable [Cursor]
     pub async fn find_many(&self, query: impl Into<Document>) -> MResult<Cursor<M>> {
         self.find(query, Find::<M>::many())
             .await
             .and_then(|r| Ok(r.cursor().unwrap()))
     }
 
+    /// Finds at most one document
     pub async fn find_one(&self, query: impl Into<Document>) -> MResult<Option<M>> {
         self.find(query, Find::<M>::one())
             .await
             .and_then(|r| Ok(r.single().unwrap()))
     }
 
+    /// Finds one document, then deletes it.
     pub async fn find_one_and_delete(&self, query: impl Into<Document>) -> MResult<Option<M>> {
         self.find(query, Find::<M>::delete())
             .await
             .and_then(|r| Ok(r.single().unwrap()))
     }
 
+    /// Finds one document, then replaces it
     pub async fn find_one_and_replace(
         &self,
         query: impl Into<Document>,
@@ -339,6 +392,7 @@ impl<M: Model + Send + Sync> Collection<M> {
             .and_then(|r| Ok(r.single().unwrap()))
     }
 
+    /// Finds one document, upserting if not found and replacing otherwise
     pub async fn find_one_and_upsert(
         &self,
         query: impl Into<Document>,
@@ -349,6 +403,7 @@ impl<M: Model + Send + Sync> Collection<M> {
             .and_then(|r| Ok(r.single().unwrap()))
     }
 
+    /// Finds one document and updates it
     pub async fn find_one_and_update(
         &self,
         query: impl Into<Document>,
@@ -359,6 +414,7 @@ impl<M: Model + Send + Sync> Collection<M> {
             .and_then(|r| Ok(r.single().unwrap()))
     }
 
+    /// Inserts many documents with options
     pub async fn insert_many_with_options(
         &self,
         documents: impl IntoIterator<Item = M>,
@@ -372,6 +428,7 @@ impl<M: Model + Send + Sync> Collection<M> {
             .or_else(|e| Err(e.into()))
     }
 
+    /// Inserts one document with options
     pub async fn insert_one_with_options(
         &self,
         document: M,
@@ -385,14 +442,17 @@ impl<M: Model + Send + Sync> Collection<M> {
             .or_else(|e| Err(e.into()))
     }
 
+    /// Simplified insert_many
     pub async fn insert_many(&self, documents: impl IntoIterator<Item = M>) -> MResult<Vec<M::Id>> {
         self.insert_many_with_options(documents, None).await
     }
 
+    /// Simplified insert_one
     pub async fn insert_one(&self, document: M) -> MResult<Option<M::Id>> {
         self.insert_one_with_options(document, None).await
     }
 
+    /// Replaces a document, with options. Optionally upserts.
     pub async fn replace_one_with_options(
         &self,
         query: impl Into<Document>,
@@ -409,6 +469,7 @@ impl<M: Model + Send + Sync> Collection<M> {
             .or_else(|e| Err(e.into()))
     }
 
+    /// Replaces a document without upserting
     pub async fn replace_one(
         &self,
         query: impl Into<Document>,
@@ -418,6 +479,7 @@ impl<M: Model + Send + Sync> Collection<M> {
             .await
     }
 
+    /// Replaces a document, or inserts it if not present
     pub async fn replace_or_insert_one(
         &self,
         query: impl Into<Document>,
@@ -427,6 +489,7 @@ impl<M: Model + Send + Sync> Collection<M> {
             .await
     }
 
+    /// Updates [Ops::One] or [Ops::Many] documents, with options
     pub async fn update_with_options(
         &self,
         query: impl Into<Document>,
@@ -449,6 +512,7 @@ impl<M: Model + Send + Sync> Collection<M> {
         }
     }
 
+    /// Updates a single document
     pub async fn update_one(
         &self,
         query: impl Into<Document>,
@@ -458,6 +522,7 @@ impl<M: Model + Send + Sync> Collection<M> {
             .await
     }
 
+    /// Updates many documents
     pub async fn update_many(
         &self,
         query: impl Into<Document>,
@@ -467,24 +532,29 @@ impl<M: Model + Send + Sync> Collection<M> {
             .await
     }
 
+    /// Gets the name of this collection
     pub fn name(&self) -> String {
         self.collection().name().to_string()
     }
 
+    /// Gets the namespace (database.collection) of this collection
     pub fn namespace(&self) -> Namespace {
         self.collection().namespace().clone()
     }
 
+    /// Gets a document by ID
     pub async fn get(&self, id: impl Into<M::Id>) -> MResult<Option<M>> {
         self.find_one(doc! {"_id": Into::<M::Id>::into(id)}).await
     }
 
+    /// Helper function to save a document (insert or replace by ID)
     pub async fn save(&self, document: M) -> MResult<()> {
         self.replace_or_insert_one(doc! {"_id": document.id()}, document)
             .await
             .and(Ok(()))
     }
 
+    /// Helper function to delete the passed document
     pub async fn delete(&self, document: M) -> MResult<()> {
         self.delete_one(doc! {"_id": document.id()}).await
     }

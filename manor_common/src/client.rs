@@ -9,6 +9,7 @@ use crate::{
     model::Model,
 };
 
+/// Global instance of the [Client], stored in a [OnceCell]
 pub const MANOR_CLIENT: OnceCell<Client> = OnceCell::new();
 
 /// A Manor client instance, wrapping the MongoDB client and a single database name.
