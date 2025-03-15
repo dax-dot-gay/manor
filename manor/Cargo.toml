@@ -2,7 +2,8 @@
 name = "manor"
 version = "0.1.0"
 edition = "2024"
+publish = ["sappho"]
 
 [dependencies]
-manor_macros = { path = "../manor_macros" }
-manor_common = { path = "../manor_common" }
+manor_macros = { path = "../manor_macros", version = "0.1.0" }
+manor_common = { path = "../manor_common", version = "0.1.0" }

@@ -4,3 +4,6 @@ members = ["manor", "manor_common", "manor_macros"]
 
 [patch.crates-io]
 manor = {path = "manor"}
+
+[patch.sappho]
+manor = {path = "manor"}
