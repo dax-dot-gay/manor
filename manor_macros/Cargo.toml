@@ -5,6 +5,10 @@ proc-macro = true
 name = "manor_macros"
 version = "0.1.0"
 edition = "2024"
+description = "An ORM for MongoDB"
+license-file = "../LICENSE"
+homepage = "https://github.com/dax-dot-gay/manor"
+repository = "https://github.com/dax-dot-gay/manor"
 
 [dependencies]
 convert_case = "0.8.0"
