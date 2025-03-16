@@ -1,4 +1,9 @@
 # `manor` - MongoDB for Rust, Simplified
+
+![docs.rs](https://img.shields.io/docsrs/manor) ![Crates.io License](https://img.shields.io/crates/l/manor)
+
+
+
 A highly-automated MongoDB ORM, extending on the `mongodb` crate to bring tighter GridFS integration, cross-document linking, and extremely low-code schema specification.
 
 > Note: Currently not tested exhaustively, and likely not ready for production. Still under active development.
