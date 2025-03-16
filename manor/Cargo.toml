@@ -2,7 +2,6 @@
 name = "manor"
 version = "0.1.0"
 edition = "2024"
-publish = ["sappho"]
 description = "An ORM for MongoDB"
 license-file = "../LICENSE"
 homepage = "https://github.com/dax-dot-gay/manor"
@@ -10,5 +9,5 @@ repository = "https://github.com/dax-dot-gay/manor"
 readme = "../README.md"
 
 [dependencies]
-manor_macros = { path = "../manor_macros", version = "0.1.0", registry = "sappho"}
-manor_common = { path = "../manor_common", version = "0.1.0", registry = "sappho"}
+manor_macros = { path = "../manor_macros", version = "0.1.0"}
+manor_common = { path = "../manor_common", version = "0.1.0"}
