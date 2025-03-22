@@ -1,6 +1,6 @@
 [package]
 name = "manor_common"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2024"
 description = "An ORM for MongoDB"
 license = "MIT"

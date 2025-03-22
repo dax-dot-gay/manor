@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["manor", "manor_common", "manor_macros"]
+members = ["manor", "manor_common", "manor_macros", "manor_testing"]
 
 [patch.crates-io]
 manor = {path = "manor"}

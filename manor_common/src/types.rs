@@ -16,7 +16,7 @@ pub struct Link<M: Model + Send + Sync> {
 
     /// The ID of the targeted document
     pub id: M::Id,
-    #[serde(skip, default)]
+    #[serde(skip, default = "Option::<M>::default")]
     resolved: Option<M>,
 
     #[serde(skip, default)]
