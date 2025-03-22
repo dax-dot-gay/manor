@@ -1,6 +1,6 @@
 use std::task::Poll;
 
-use bson::{Bson, Document, doc, from_bson, to_document};
+use bson::{doc, from_bson, to_document, Bson, Document};
 use futures_core::Stream;
 use mongodb::{
     Namespace,
@@ -485,8 +485,16 @@ impl<M: Model + Send + Sync> Collection<M> {
         query: impl Into<Document>,
         document: M,
     ) -> MResult<Option<M::Id>> {
-        self.replace_one_with_options(query, document, true, None)
-            .await
+        let _query: Document = query.into();
+        if let Ok(Some(_)) = self.collection.find_one(_query.clone()).await {
+            let mut as_doc = to_document(&document).or_else(|e| Err(Error::Serialization(e)))?;
+            let _ = as_doc.remove("_id");
+            self.client().database().collection::<Document>(&M::collection_name()).replace_one(_query, as_doc).await.or_else(|e| Err(Error::MongoError(e)))?;
+            Ok(Some(document.id()))
+        } else {
+            self.insert_one(document.clone()).await?;
+            Ok(Some(document.id()))
+        }
     }
 
     /// Updates [Ops::One] or [Ops::Many] documents, with options
@@ -549,15 +557,9 @@ impl<M: Model + Send + Sync> Collection<M> {
 
     /// Helper function to save a document (insert or replace by ID)
     pub async fn save(&self, document: M) -> MResult<()> {
-        let as_bson = to_document(&document).or_else(|e| Err(Error::Serialization(e)))?;
-        self.update_with_options(
-            doc! {"_id": document.id()},
-            UpdateModifications::Document(doc! {"$set": as_bson}),
-            Ops::One,
-            Some(UpdateOptions::builder().upsert(Some(true)).build()),
-        )
-        .await
-        .and(Ok(()))
+        self.replace_or_insert_one(doc! {"_id": document.id()}, document)
+            .await
+            .and(Ok(()))
     }
 
     /// Helper function to delete the passed document
