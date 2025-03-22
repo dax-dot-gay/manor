@@ -1,6 +1,6 @@
 use std::task::Poll;
 
-use bson::{Bson, Document, doc, from_bson};
+use bson::{Bson, Document, doc, from_bson, to_document};
 use futures_core::Stream;
 use mongodb::{
     Namespace,
@@ -549,9 +549,15 @@ impl<M: Model + Send + Sync> Collection<M> {
 
     /// Helper function to save a document (insert or replace by ID)
     pub async fn save(&self, document: M) -> MResult<()> {
-        self.replace_or_insert_one(doc! {"_id": document.id()}, document)
-            .await
-            .and(Ok(()))
+        let as_bson = to_document(&document).or_else(|e| Err(Error::Serialization(e)))?;
+        self.update_with_options(
+            doc! {"_id": document.id()},
+            UpdateModifications::Document(doc! {"$set": as_bson}),
+            Ops::One,
+            Some(UpdateOptions::builder().upsert(Some(true)).build()),
+        )
+        .await
+        .and(Ok(()))
     }
 
     /// Helper function to delete the passed document
