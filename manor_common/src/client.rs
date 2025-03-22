@@ -1,4 +1,4 @@
-use std::cell::OnceCell;
+use once_cell::sync::OnceCell;
 
 use mongodb::options::GridFsBucketOptions;
 
@@ -10,7 +10,7 @@ use crate::{
 };
 
 /// Global instance of the [Client], stored in a [OnceCell]
-pub const MANOR_CLIENT: OnceCell<Client> = OnceCell::new();
+pub(crate) static MANOR_CLIENT: OnceCell<Client> = OnceCell::new();
 
 /// A Manor client instance, wrapping the MongoDB client and a single database name.
 #[derive(Clone, Debug)]

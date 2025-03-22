@@ -25,7 +25,7 @@ pub mod gridfs;
 /// ```
 /// Client::connect_with_*().as_global();
 /// ```
-pub use client::MANOR_CLIENT;
+pub(crate) use client::MANOR_CLIENT;
 
 #[doc(hidden)]
 pub use {

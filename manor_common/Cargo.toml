@@ -1,6 +1,6 @@
 [package]
 name = "manor_common"
-version = "0.1.3"
+version = "0.2.0"
 edition = "2024"
 description = "An ORM for MongoDB"
 license = "MIT"
@@ -19,3 +19,4 @@ thiserror = "2.0.12"
 derive_builder = "0.20.2"
 async-trait = "0.1.87"
 chrono = { version = "0.4.40", features = ["serde"] }
+once_cell = "1.21.1"
