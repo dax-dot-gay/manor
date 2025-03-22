@@ -1,6 +1,6 @@
 [package]
 name = "manor"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 description = "An ORM for MongoDB"
 license = "MIT"
@@ -9,5 +9,5 @@ repository = "https://github.com/dax-dot-gay/manor"
 readme = "../README.md"
 
 [dependencies]
-manor_macros = { path = "../manor_macros", version = "0.1.1"}
-manor_common = { path = "../manor_common", version = "0.1.1"}
+manor_macros = { path = "../manor_macros", version = "0.1.2"}
+manor_common = { path = "../manor_common", version = "0.1.2"}

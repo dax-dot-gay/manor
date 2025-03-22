@@ -9,7 +9,8 @@ pub use manor_common::{
     gridfs::{self, GridFS, GridFile},
     model::Model,
     types::Link,
-    MANOR_CLIENT
+    MANOR_CLIENT,
+    client::Client
 };
 
 #[doc(inline)]
