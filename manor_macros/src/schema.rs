@@ -34,6 +34,7 @@ pub(crate) fn generate_schema(_args: TokenStream, _input: TokenStream) -> TokenS
                 .write_errors(),
         );
     };
+    let input_attrs = input.attrs;
 
     let args = catch!(SchemaArgs::from_list(&attr_args));
 
@@ -148,6 +149,7 @@ pub(crate) fn generate_schema(_args: TokenStream, _input: TokenStream) -> TokenS
     quote! {
         #[derive(Clone, Debug, manor::serde::Serialize, manor::serde::Deserialize, manor::derive_builder::Builder)]
         #[builder(name = #builder_name, crate = "manor::derive_builder", setter(into, strip_option))]
+        #(#input_attrs)*
         pub struct #schema_name {
             #assembled_fields
         }
