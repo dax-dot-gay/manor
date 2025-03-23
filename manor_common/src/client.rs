@@ -34,18 +34,18 @@ impl Client {
     }
 
     /// Creates a client from a MongoDB connection string
-    pub fn connect_with_uri(uri: impl Into<String>, database: impl Into<String>) -> MResult<Self> {
+    pub async fn connect_with_uri(uri: impl Into<String>, database: impl Into<String>) -> MResult<Self> {
         let converted = uri.into();
         let connection_str = mongodb::options::ConnectionString::parse(&converted)
             .or_else(|e| Err(Error::InvalidUri(converted.clone(), e)))?;
         let options = mongodb::options::ClientOptions::parse(connection_str)
-            .run()
+            .await
             .or_else(|e| Err(Error::InvalidUri(converted.clone(), e)))?;
-        Self::connect_with_options(options, database)
+        Self::connect_with_options(options, database).await
     }
 
     /// Creates a client from MongoDB client options
-    pub fn connect_with_options(
+    pub async fn connect_with_options(
         options: mongodb::options::ClientOptions,
         database: impl Into<String>,
     ) -> MResult<Self> {
@@ -57,7 +57,7 @@ impl Client {
     }
 
     /// Creates a client from an existing MongoDB client instance
-    pub fn connect_with_client(client: mongodb::Client, database: impl Into<String>) -> Self {
+    pub async fn connect_with_client(client: mongodb::Client, database: impl Into<String>) -> Self {
         Self {
             client,
             database: database.into(),
