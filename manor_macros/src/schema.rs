@@ -80,6 +80,8 @@ pub(crate) fn generate_schema(_args: TokenStream, _input: TokenStream) -> TokenS
 
                     id_type = field.ty.clone();
                     id_name = Some(field.ident.clone().unwrap());
+                    let unparsed_attrs = field.attrs.clone();
+                    let id_field_attrs = unparsed_attrs.iter().filter(|i| !i.path().is_ident("field")).collect::<Vec<&Attribute>>();
                     
                     let id_ident = id_name.clone().unwrap();
 
@@ -88,6 +90,7 @@ pub(crate) fn generate_schema(_args: TokenStream, _input: TokenStream) -> TokenS
                             quote! {
                                 #[serde(rename = "_id", default = #formatted_gen_id)]
                                 #[builder(default = #formatted_gen_id_call)]
+                                #(#id_field_attrs)*
                                 pub #id_ident: #id_type
                             }.into()
                         )

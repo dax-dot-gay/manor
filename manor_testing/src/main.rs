@@ -12,6 +12,7 @@ pub struct Session {
 #[schema(collection = "users")]
 pub struct User {
     #[field(id = Uuid::new)]
+    #[serde(alias = "ID")]
     pub id: Uuid,
     pub username: String,
 }
